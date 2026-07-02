@@ -160,7 +160,7 @@ class CameraBridge:
                 cmd["direction"] = direction.value
                 now = time.monotonic()
 
-                if direction != self.last_direction or now - self.last_send_at > 2.0:
+                if direction != self.last_direction:
                     self.last_direction = direction
                     self.last_send_at = now
                     await self.broadcast(cmd)
