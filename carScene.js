@@ -82,13 +82,13 @@ async function createScene(canvas) {
     engine = new BABYLON.Engine(canvas);
     scene = new BABYLON.Scene(engine);
 
-    // Appliquer l'environnement initial
-    applyEnvironment(0);
-
     havokInstance = new BABYLON.HavokPlugin(false);
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0), havokInstance);
     scene.getPhysicsEngine().setTimeStep(1 / 500);
     scene.getPhysicsEngine().setSubTimeStep(4.5);
+
+    // Appliquer l'environnement initial (après activation de la physique)
+    applyEnvironment(0);
 
     const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
     camera.radius = 50;

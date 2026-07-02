@@ -67,3 +67,5 @@ function switchVehicle(type) {
     if (window.setVehicleType) window.setVehicleType(type);
     createNewScene();
 }
+
+init().catch(console.error);
