@@ -1,0 +1,68 @@
+// ──────────────────────────────────────────────
+// Définitions des environnements physiques
+// ──────────────────────────────────────────────
+// Données pures — pas de dépendance à BABYLON ici.
+
+export const ENVIRONMENTS = [
+    {
+        name: 'Plaine',
+        icon: '🏞️',
+        groundColor: [0.25, 0.5, 0.2],
+        groundTexture: 'textures/amiga.jpg',
+        groundTextureScale: 20,
+        friction: 300,
+        restitution: 0,
+        wallColor: [0.4, 0.25, 0.1],
+        skyColor: [0.6, 0.8, 1.0],
+        fog: false,
+        obstacles: [],
+    },
+    {
+        name: 'Glace',
+        icon: '🧊',
+        groundColor: [0.85, 0.9, 1.0],
+        groundTexture: null,
+        groundTextureScale: 1,
+        friction: 10,       // très glissant
+        restitution: 0.05,
+        wallColor: [0.7, 0.8, 0.95],
+        skyColor: [0.9, 0.95, 1.0],
+        fog: false,
+        obstacles: [],
+    },
+    {
+        name: 'Lunaire',
+        icon: '🌕',
+        groundColor: [0.6, 0.58, 0.55],
+        groundTexture: null,
+        groundTextureScale: 1,
+        friction: 100,
+        restitution: 0.3,   // rebondit plus
+        wallColor: [0.5, 0.48, 0.45],
+        skyColor: [0.05, 0.05, 0.1],
+        fog: false,
+        obstacles: [
+            { type: 'bump', x: 30, z: 30, size: 4, height: 2 },
+            { type: 'bump', x: -25, z: 40, size: 6, height: 3 },
+            { type: 'bump', x: 40, z: -35, size: 5, height: 2.5 },
+        ],
+    },
+    {
+        name: 'Obstacles',
+        icon: '🧱',
+        groundColor: [0.35, 0.3, 0.25],
+        groundTexture: null,
+        groundTextureScale: 1,
+        friction: 300,
+        restitution: 0,
+        wallColor: [0.5, 0.2, 0.1],
+        skyColor: [0.5, 0.6, 0.7],
+        fog: false,
+        obstacles: [
+            { type: 'ramp', x: 20, z: 20, width: 8, height: 3, depth: 4 },
+            { type: 'ramp', x: -20, z: -20, width: 8, height: 3, depth: 4 },
+            { type: 'box', x: 15, z: -30, width: 4, height: 2, depth: 4 },
+            { type: 'box', x: -30, z: 15, width: 4, height: 2, depth: 4 },
+        ],
+    },
+];

@@ -1,10 +1,20 @@
 let havokInstance = null;
 let tyreMaterial;
 let scene;
+let engine;
+
+// Références pour le changement d'environnement
+let envMeshes = [];
+let envObstacles = [];
+let currentEnvIndex = 0;
 
 // ── API globale pour Blockly ──
 let targetSpeed = 0;
 let targetSteeringAngle = 0;
+let vehicleType = 'car'; // 'car' | 'rover'
+
+window.getVehicleType = () => vehicleType;
+window.setVehicleType = (t) => { vehicleType = t; };
 
 window.setRobotSpeed = function (speed) {
     targetSpeed = speed;
@@ -66,17 +76,18 @@ debugColours[4] = new BABYLON.Color3(0, 1, 1);
 debugColours[5] = new BABYLON.Color3(0, 0, 1);
 const FILTERS = { CarParts: 1, Environment: 2 }
 
+import { ENVIRONMENTS } from './environments.js';
+
 async function createScene(canvas) {
-    const engine = new BABYLON.Engine(canvas);
+    engine = new BABYLON.Engine(canvas);
     scene = new BABYLON.Scene(engine);
+
+    // Appliquer l'environnement initial
+    applyEnvironment(0);
 
     havokInstance = new BABYLON.HavokPlugin(false);
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0), havokInstance);
     scene.getPhysicsEngine().setTimeStep(1 / 500);
-    //
-    // NOTE: To change the speed of the simulation without distoring the physics too much, leave the setTimeStep and 
-    // update the setSubTimeStep (only the case when HavokPlugin() _useDeltaForWorldStep is set to false)
-    //
     scene.getPhysicsEngine().setSubTimeStep(4.5);
 
     const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
@@ -90,8 +101,8 @@ async function createScene(canvas) {
     hemisphericLight.intensity = 0.7;
 
     InitTyreMaterial();
-    CreateGroundAndWalls();
-    camera.lockedTarget = CreateCar();
+    const vehicle = CreateVehicle('car');
+    camera.lockedTarget = vehicle;
 
     engine.runRenderLoop(() => {
         if (scene && scene.activeCamera) {
@@ -102,6 +113,158 @@ async function createScene(canvas) {
     return scene;
 }
 
+// ── Création de véhicule (voiture ou rover) ──
+function CreateVehicle(type) {
+    if (type === 'rover') return CreateRover();
+    return CreateCar();
+}
+
+// ── Création du rover (modèle simplifié à 1 seul corps physique) ──
+function CreateRover() {
+    const group = new BABYLON.TransformNode('RoverGroup');
+
+    // Corps
+    const body = BABYLON.MeshBuilder.CreateBox('Body', { height: 1.2, width: 6, depth: 10 });
+    body.position = new BABYLON.Vector3(0, 0.6, 0);
+    body.parent = group;
+
+    // Panneau solaire
+    const panel = BABYLON.MeshBuilder.CreateBox('Panel', { height: 0.1, width: 7, depth: 11 });
+    panel.position = new BABYLON.Vector3(0, 1.25, 0);
+    panel.parent = group;
+
+    // Mât + capteur
+    const mast = BABYLON.MeshBuilder.CreateCylinder('Mast', { height: 2, diameter: 0.2 });
+    mast.position = new BABYLON.Vector3(0, 2.3, 0);
+    mast.parent = group;
+    const sensor = BABYLON.MeshBuilder.CreateSphere('Sensor', { diameter: 0.6 });
+    sensor.position = new BABYLON.Vector3(0, 3.4, 0);
+    sensor.parent = group;
+
+    // 6 roues
+    const wPos = [
+        [3.5, 3.5], [-3.5, 3.5], [3.5, 0],
+        [-3.5, 0], [3.5, -3.5], [-3.5, -3.5],
+    ];
+    for (const [x, z] of wPos) {
+        const w = BABYLON.MeshBuilder.CreateCylinder('W', { height: 1, diameter: 2.5 });
+        w.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2);
+        w.bakeCurrentTransformIntoVertices();
+        w.position = new BABYLON.Vector3(x, 0, z);
+        w.parent = group;
+    }
+
+    // Fusion en un seul mesh
+    const merged = BABYLON.Mesh.MergeMeshes(group.getChildMeshes(), true, true);
+    merged.position = new BABYLON.Vector3(0, 1.5, 0);
+    merged.name = 'Rover';
+
+    // Physique boîte simple
+    const physicsShape = new BABYLON.PhysicsShapeBox(
+        new BABYLON.Vector3(0, 0, 0),
+        BABYLON.Quaternion.Identity(),
+        new BABYLON.Vector3(6, 1.5, 10),
+        scene
+    );
+    const physicsBody = new BABYLON.PhysicsBody(merged, BABYLON.PhysicsMotionType.DYNAMIC, false, scene);
+    physicsBody.setMassProperties({ mass: 600 });
+    physicsShape.material = { restitution: 0.1, friction: 50 };
+    physicsBody.shape = physicsShape;
+
+    window._carMesh = merged;
+    window.robotResetTracking();
+
+    return merged;
+}
+
+// ── Changement d'environnement ──
+function applyEnvironment(index) {
+    // Nettoyer l'ancien environnement
+    for (const m of envMeshes) {
+        m.physicsBody?.dispose();
+        m.dispose();
+    }
+    for (const m of envObstacles) {
+        m.physicsBody?.dispose();
+        m.dispose();
+    }
+    envMeshes = [];
+    envObstacles = [];
+
+    const env = ENVIRONMENTS[index];
+    currentEnvIndex = index;
+
+    // Fond
+    scene.clearColor = new BABYLON.Color3(...env.skyColor);
+
+    // Sol
+    const groundMat = new BABYLON.StandardMaterial('GroundMat', scene);
+    groundMat.diffuseColor = new BABYLON.Color3(...env.groundColor);
+    if (env.groundTexture) {
+        const tex = new BABYLON.Texture(env.groundTexture, scene);
+        tex.uScale = env.groundTextureScale;
+        tex.vScale = env.groundTextureScale;
+        groundMat.diffuseTexture = tex;
+    }
+    const ground = BABYLON.MeshBuilder.CreateGround('Ground', { height: 500, width: 500 });
+    ground.material = groundMat;
+    ground.position = new BABYLON.Vector3(0, -10, 0);
+    AddStaticPhysics(ground, env.friction, env.restitution);
+    envMeshes.push(ground);
+
+    // Murs
+    const wallMat = new BABYLON.StandardMaterial('WallMat', scene);
+    wallMat.diffuseColor = new BABYLON.Color3(...env.wallColor);
+    const wallDefs = [
+        { x: 0, z: 250, w: 500, d: 1 },
+        { x: 0, z: -250, w: 500, d: 1 },
+        { x: 250, z: 0, w: 1, d: 500 },
+        { x: -250, z: 0, w: 1, d: 500 },
+    ];
+    for (const wd of wallDefs) {
+        const wall = BABYLON.MeshBuilder.CreateBox('Wall', { height: 20, width: wd.w, depth: wd.d });
+        wall.position = new BABYLON.Vector3(wd.x, 0, wd.z);
+        wall.material = wallMat;
+        AddStaticPhysics(wall, env.friction, env.restitution);
+        envMeshes.push(wall);
+    }
+
+    // Obstacles
+    for (const obs of env.obstacles) {
+        if (obs.type === 'bump') {
+            const bump = BABYLON.MeshBuilder.CreateCylinder('Bump', {
+                height: obs.height, diameter: obs.size * 2,
+            });
+            bump.position = new BABYLON.Vector3(obs.x, obs.height / 2 - 10, obs.z);
+            AddStaticPhysics(bump, env.friction, env.restitution);
+            envObstacles.push(bump);
+        } else if (obs.type === 'ramp') {
+            const ramp = BABYLON.MeshBuilder.CreateBox('Ramp', {
+                width: obs.width, height: obs.height, depth: obs.depth,
+            });
+            ramp.position = new BABYLON.Vector3(obs.x, obs.height / 2 - 10, obs.z);
+            ramp.rotation.x = 0.3;
+            ramp.bakeCurrentTransformIntoVertices();
+            AddStaticPhysics(ramp, env.friction, env.restitution);
+            envObstacles.push(ramp);
+        } else if (obs.type === 'box') {
+            const box = BABYLON.MeshBuilder.CreateBox('ObsBox', {
+                width: obs.width, height: obs.height, depth: obs.depth,
+            });
+            box.position = new BABYLON.Vector3(obs.x, obs.height / 2 - 10, obs.z);
+            AddStaticPhysics(box, env.friction, env.restitution);
+            envObstacles.push(box);
+        }
+    }
+}
+
+// Fonction publique pour changer d'environnement
+window.switchEnvironment = function (index) {
+    if (!scene || index < 0 || index >= ENVIRONMENTS.length) return;
+    applyEnvironment(index);
+};
+
+// ── Création de la voiture (existante) ──
 function CreateCar() {
     const carFrame = BABYLON.MeshBuilder.CreateBox("Frame", { height: 1, width: 12, depth: 24, faceColors: debugColours });
     carFrame.position = new BABYLON.Vector3(0, 0.3, 0);
@@ -442,10 +605,10 @@ function AddDynamicPhysics(mesh, mass, bounce, friction) {
     return physicsBody;
 }
 
-function AddStaticPhysics(mesh, friction) {
+function AddStaticPhysics(mesh, friction, restitution) {
     const physicsShape = new BABYLON.PhysicsShapeMesh(mesh, scene);
     const physicsBody = new BABYLON.PhysicsBody(mesh, BABYLON.PhysicsMotionType.STATIC, false, scene);
-    physicsShape.material = { restitution: 0, friction: friction };
+    physicsShape.material = { restitution: restitution || 0, friction: friction };
     physicsBody.shape = physicsShape;
 
     return physicsBody;

@@ -5,8 +5,11 @@ import { initBlockly, runBlocklyCode, stopBlocklyCode, resetBlocklyWorkspace } f
 // Rendre BABYLON accessible globalement pour carScene.js qui l'utilise ainsi
 window.BABYLON = BABYLON;
 
+let currentScene = null;
+let currentEngine = null;
+
 async function init() {
-    // Initialiser Havok Physics (le WASM est chargé automatiquement dans un navigateur)
+    // Initialiser Havok Physics
     const havokInstance = await HavokPhysics();
     window.HK = havokInstance;
 
@@ -18,22 +21,49 @@ async function init() {
     window.stopBlockly = stopBlocklyCode;
     window.resetBlockly = resetBlocklyWorkspace;
 
-    // Importer dynamiquement la scène (elle a besoin de BABYLON en global)
-    const { default: createScene } = await import('./carScene.js');
+    // Exposer les fonctions de changement d'environnement/véhicule
+    window.switchEnv = switchEnv;
+    window.switchVehicle = switchVehicle;
+
+    // Créer la scène initiale
+    await createNewScene();
+
+    // Redimensionnement (un seul écouteur)
+    window.addEventListener('resize', () => {
+        if (currentEngine) currentEngine.resize();
+    });
+}
+
+async function createNewScene() {
+    // Nettoyer l'ancienne scène
+    if (currentScene) {
+        currentScene.dispose();
+        currentScene = null;
+        currentEngine = null;
+    }
 
     const canvas = document.getElementById('renderCanvas');
-
-    // Créer la scène
-    const scene = await createScene(canvas);
+    const { default: createScene } = await import('./carScene.js');
+    currentScene = await createScene(canvas);
+    currentEngine = currentScene.getEngine();
 
     console.log('Scène créée avec succès !');
 
     // Lancer la boucle de rendu
-    const engine = scene.getEngine();
-    engine.runRenderLoop(() => scene.render());
-
-    // Redimensionnement adaptatif
-    window.addEventListener('resize', () => engine.resize());
+    currentEngine.runRenderLoop(() => currentScene.render());
 }
 
-init().catch(console.error);
+function switchEnv(index) {
+    document.querySelectorAll('#envMenu button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`#envMenu button[data-index="${index}"]`)?.classList.add('active');
+    if (window.switchEnvironment) {
+        window.switchEnvironment(index);
+    }
+}
+
+function switchVehicle(type) {
+    document.querySelectorAll('#vehicleMenu button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`#vehicleMenu button[data-vehicle="${type}"]`)?.classList.add('active');
+    if (window.setVehicleType) window.setVehicleType(type);
+    createNewScene();
+}

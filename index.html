@@ -77,6 +77,57 @@
             height: 100%;
             display: block;
         }
+
+        /* Menu flottant en haut à droite du canvas */
+        #sceneMenu {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .menu-group {
+            background: rgba(30, 30, 30, 0.85);
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 110px;
+            backdrop-filter: blur(6px);
+        }
+
+        .menu-group label {
+            color: #aaa;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 2px 6px 0;
+        }
+
+        .menu-group button {
+            background: transparent;
+            border: none;
+            color: #ddd;
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            text-align: left;
+            transition: background 0.15s;
+        }
+        .menu-group button:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .menu-group button.active {
+            background: rgba(76, 175, 80, 0.3);
+            color: #fff;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -93,7 +144,25 @@
         </div>
 
         <!-- Zone Babylon.js -->
-        <canvas id="renderCanvas"></canvas>
+        <div style="position:relative; flex:1; height:100%;">
+            <canvas id="renderCanvas"></canvas>
+
+            <!-- Menu flottant -->
+            <div id="sceneMenu">
+                <div class="menu-group" id="envMenu">
+                    <label>Environnement</label>
+                    <button data-index="0" class="active" onclick="switchEnv(0)">🏞️ Plaine</button>
+                    <button data-index="1" onclick="switchEnv(1)">🧊 Glace</button>
+                    <button data-index="2" onclick="switchEnv(2)">🌕 Lunaire</button>
+                    <button data-index="3" onclick="switchEnv(3)">🧱 Obstacles</button>
+                </div>
+                <div class="menu-group" id="vehicleMenu">
+                    <label>Véhicule</label>
+                    <button data-vehicle="car" class="active" onclick="switchVehicle('car')">🚗 Voiture</button>
+                    <button data-vehicle="rover" onclick="switchVehicle('rover')">🛸 Rover</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Toolbox des blocs Blockly -->
