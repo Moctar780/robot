@@ -18,10 +18,12 @@ function CreateVehicle(type) {
 export function toggleCameraMode() {
     if (!scene) return;
     if (currentCamMode === 'follow') {
+        freeCamera.attachControl(true);
         scene.activeCamera = freeCamera;
         currentCamMode = 'free';
         return 'free';
     } else {
+        freeCamera.detachControl();
         scene.activeCamera = followCamera;
         currentCamMode = 'follow';
         return 'follow';
@@ -55,15 +57,16 @@ export default async function createScene(canvas) {
     followCamera.cameraAcceleration = 0.035;
     followCamera.maxCameraSpeed = 10;
 
-    // Caméra libre (ArcRotateCamera)
-    freeCamera = new BABYLON.ArcRotateCamera('FreeCam', 0, Math.PI / 3, 80, new BABYLON.Vector3(0, 0, 0), scene);
-    freeCamera.lowerRadiusLimit = 10;
-    freeCamera.upperRadiusLimit = 200;
-    freeCamera.panningSensibility = 1;
-    freeCamera.keysUp = [];
-    freeCamera.keysDown = [];
-    freeCamera.keysLeft = [];
-    freeCamera.keysRight = [];
+    // Caméra libre (ArcRotateCamera) — orbite 3D
+    freeCamera = new BABYLON.ArcRotateCamera('FreeCam', -Math.PI / 4, Math.PI / 4, 80, new BABYLON.Vector3(0, 0, 0), scene);
+    freeCamera.lowerRadiusLimit = 5;
+    freeCamera.upperRadiusLimit = 300;
+    freeCamera.lowerBetaLimit = 0.05;
+    freeCamera.upperBetaLimit = Math.PI / 2.2;
+    freeCamera.panningSensibility = 50;
+    freeCamera.wheelPrecision = 5;
+    freeCamera.angularSensibilityX = 500;
+    freeCamera.angularSensibilityY = 500;
 
     const light = new BABYLON.HemisphericLight('Light', new BABYLON.Vector3(1, 1, 0), scene);
     light.intensity = 0.7;
