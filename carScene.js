@@ -101,7 +101,8 @@ async function createScene(canvas) {
     hemisphericLight.intensity = 0.7;
 
     InitTyreMaterial();
-    const vehicle = CreateVehicle('car');
+    const vType = (typeof vehicleType !== 'undefined' && vehicleType) || 'car';
+    const vehicle = CreateVehicle(vType);
     camera.lockedTarget = vehicle;
 
     engine.runRenderLoop(() => {

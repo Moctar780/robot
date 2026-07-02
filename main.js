@@ -50,7 +50,9 @@ async function createNewScene() {
     console.log('Scène créée avec succès !');
 
     // Lancer la boucle de rendu
-    currentEngine.runRenderLoop(() => currentScene.render());
+    if (currentScene && currentEngine) {
+        currentEngine.runRenderLoop(() => currentScene.render());
+    }
 }
 
 function switchEnv(index) {
