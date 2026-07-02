@@ -62,6 +62,6 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Babylon Car Simulator v__VERSION__'
-          releaseBody: 'Consultez les assets ci-dessous pour télécharger l\'application.'
+          releaseBody: "Consultez les assets ci-dessous pour télécharger l'application."
           releaseDraft: true
           prerelease: false
