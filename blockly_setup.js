@@ -179,6 +179,7 @@ Blockly.JavaScript.forBlock['robot_move_distance'] = function (block) {
         `window.setRobotSpeed(${speed});`,
         `await window.robotWaitForDistance(${distance});`,
         `window.setRobotSpeed(0);`,
+        `await window.robotWait(0.2);`,
     ].join('\n');
 };
 
@@ -188,9 +189,13 @@ Blockly.JavaScript.forBlock['robot_turn_angle'] = function (block) {
     const steerAngle = direction === 'LEFT' ? 0.5 : -0.5;
     return [
         `window.setRobotSteering(${steerAngle});`,
+        `const prevSpeed = window.getRobotSpeed ? window.getRobotSpeed() : 0;`,
+        `if (prevSpeed === 0) window.setRobotSpeed(80);`,
         `window.robotResetTracking();`,
         `await window.robotWaitForAngle(${angle * Math.PI / 180});`,
         `window.setRobotSteering(0);`,
+        `if (prevSpeed === 0) window.setRobotSpeed(0);`,
+        `await window.robotWait(0.2);`,
     ].join('\n');
 };
 
@@ -241,34 +246,79 @@ export function initBlockly() {
 export function runBlocklyCode() {
     if (!workspace) return;
 
+    // Annuler toute exécution précédente avant de lancer la nouvelle
+    stopBlocklyCode();
+
     // Fonction d'attente exposée globalement
     window.robotWait = (seconds) => {
-        return new Promise((resolve) => {
-            const checkAborted = () => {
-                if (abortController && abortController.signal.aborted) {
-                    resolve();
-                    return;
-                }
-                setTimeout(resolve, seconds * 1000);
+        return new Promise((resolve, reject) => {
+            const activeController = abortController;
+            let timeoutId = null;
+            const onAbort = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                const err = new Error('Aborted');
+                err.name = 'AbortError';
+                reject(err);
             };
-            checkAborted();
+
+            if (activeController && activeController.signal.aborted) {
+                onAbort();
+                return;
+            }
+
+            if (activeController) {
+                activeController.signal.addEventListener('abort', onAbort);
+            }
+
+            timeoutId = setTimeout(() => {
+                if (activeController) {
+                    activeController.signal.removeEventListener('abort', onAbort);
+                }
+                if (activeController && activeController.signal.aborted) {
+                    onAbort();
+                } else {
+                    resolve();
+                }
+            }, seconds * 1000);
         });
     };
 
     // Attendre que le robot ait parcouru une distance (en mètres)
     window.robotWaitForDistance = (targetDistance) => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             window.robotResetTracking();
+            const activeController = abortController;
+
+            let frameId = null;
+            const onAbort = () => {
+                if (frameId) cancelAnimationFrame(frameId);
+                const err = new Error('Aborted');
+                err.name = 'AbortError';
+                reject(err);
+            };
+
+            if (activeController && activeController.signal.aborted) {
+                onAbort();
+                return;
+            }
+
+            if (activeController) {
+                activeController.signal.addEventListener('abort', onAbort);
+            }
+
             const checkDistance = () => {
-                if (abortController && abortController.signal.aborted) {
-                    resolve();
+                if (activeController && activeController.signal.aborted) {
+                    onAbort();
                     return;
                 }
                 if (window.robotGetDistanceTraveled() >= targetDistance) {
+                    if (activeController) {
+                        activeController.signal.removeEventListener('abort', onAbort);
+                    }
                     resolve();
                     return;
                 }
-                requestAnimationFrame(checkDistance);
+                frameId = requestAnimationFrame(checkDistance);
             };
             checkDistance();
         });
@@ -276,17 +326,38 @@ export function runBlocklyCode() {
 
     // Attendre que le robot ait tourné d'un angle (en radians)
     window.robotWaitForAngle = (targetAngle) => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            const activeController = abortController;
+            let frameId = null;
+            const onAbort = () => {
+                if (frameId) cancelAnimationFrame(frameId);
+                const err = new Error('Aborted');
+                err.name = 'AbortError';
+                reject(err);
+            };
+
+            if (activeController && activeController.signal.aborted) {
+                onAbort();
+                return;
+            }
+
+            if (activeController) {
+                activeController.signal.addEventListener('abort', onAbort);
+            }
+
             const checkAngle = () => {
-                if (abortController && abortController.signal.aborted) {
-                    resolve();
+                if (activeController && activeController.signal.aborted) {
+                    onAbort();
                     return;
                 }
                 if (window.robotGetAngleTurned() >= targetAngle) {
+                    if (activeController) {
+                        activeController.signal.removeEventListener('abort', onAbort);
+                    }
                     resolve();
                     return;
                 }
-                requestAnimationFrame(checkAngle);
+                frameId = requestAnimationFrame(checkAngle);
             };
             checkAngle();
         });

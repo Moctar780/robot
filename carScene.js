@@ -10,6 +10,10 @@ window.setRobotSpeed = function (speed) {
     targetSpeed = speed;
 };
 
+window.getRobotSpeed = function () {
+    return targetSpeed;
+};
+
 window.setRobotSteering = function (angle) {
     targetSteeringAngle = angle;
 };
@@ -17,35 +21,39 @@ window.setRobotSteering = function (angle) {
 // Suivi de position/direction pour les blocs distance et angle
 window._carMesh = null;
 
-window.robotStartPos = { x: 0, z: 0 };
-window.robotStartAngle = 0;
+window.robotAccumulatedDistance = 0;
+window.robotAccumulatedAngle = 0;
+window.robotLastPos = { x: 0, z: 0 };
+window.robotLastAngle = 0;
+window.robotTrackingInitialized = false;
 
 /** Retourne la distance parcourue depuis le dernier reset */
 window.robotGetDistanceTraveled = function () {
-    if (!window._carMesh) return 0;
-    const dx = window._carMesh.position.x - window.robotStartPos.x;
-    const dz = window._carMesh.position.z - window.robotStartPos.z;
-    return Math.sqrt(dx * dx + dz * dz);
+    return window.robotAccumulatedDistance || 0;
 };
 
 /** Retourne l'angle parcouru depuis le dernier reset */
 window.robotGetAngleTurned = function () {
-    if (!window._carMesh) return 0;
-    // L'angle Y (lacet) du mesh
-    const currentAngle = window._carMesh.rotation.y;
-    let delta = currentAngle - window.robotStartAngle;
-    // Normaliser entre -PI et PI
-    while (delta > Math.PI) delta -= 2 * Math.PI;
-    while (delta < -Math.PI) delta += 2 * Math.PI;
-    return Math.abs(delta);
+    return window.robotAccumulatedAngle || 0;
 };
 
 /** Réinitialise les compteurs de distance/angle */
 window.robotResetTracking = function () {
     if (!window._carMesh) return;
-    window.robotStartPos.x = window._carMesh.position.x;
-    window.robotStartPos.z = window._carMesh.position.z;
-    window.robotStartAngle = window._carMesh.rotation.y;
+    
+    let currentAngle = 0;
+    if (window._carMesh.rotationQuaternion) {
+        const euler = window._carMesh.rotationQuaternion.toEulerAngles();
+        currentAngle = euler.y;
+    } else {
+        currentAngle = window._carMesh.rotation.y;
+    }
+    
+    window.robotAccumulatedDistance = 0;
+    window.robotAccumulatedAngle = 0;
+    window.robotLastPos = { x: window._carMesh.position.x, z: window._carMesh.position.z };
+    window.robotLastAngle = currentAngle;
+    window.robotTrackingInitialized = true;
 };
 // ──────────────────────────────
 
@@ -328,11 +336,39 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
         // (Blockly ou dernière commande clavier)
 
         const [innerAngle, outerAngle] = CalculateWheelAngles(targetSteeringAngle);
-        steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
-        steerWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, innerAngle);
+        // Correction de la direction Ackermann : La roue gauche (A) est la roue intérieure quand on tourne à gauche, 
+        // et la roue droite (B) est la roue extérieure. L'ancien code les avait inversées.
+        steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, innerAngle);
+        steerWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
 
         motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, targetSpeed);
         motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, targetSpeed);
+
+        // Mettre à jour le suivi de distance et d'angle si initialisé
+        if (window._carMesh && window.robotTrackingInitialized) {
+            let currentAngle = 0;
+            if (window._carMesh.rotationQuaternion) {
+                const euler = window._carMesh.rotationQuaternion.toEulerAngles();
+                currentAngle = euler.y;
+            } else {
+                currentAngle = window._carMesh.rotation.y;
+            }
+
+            // Calculer delta angle et l'accumuler
+            let deltaAngle = currentAngle - window.robotLastAngle;
+            while (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
+            while (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+            window.robotAccumulatedAngle += Math.abs(deltaAngle);
+            window.robotLastAngle = currentAngle;
+
+            // Calculer delta distance et l'accumuler (distance curviligne le long du trajet)
+            const dx = window._carMesh.position.x - window.robotLastPos.x;
+            const dz = window._carMesh.position.z - window.robotLastPos.z;
+            const deltaDist = Math.sqrt(dx * dx + dz * dz);
+            window.robotAccumulatedDistance += deltaDist;
+            window.robotLastPos.x = window._carMesh.position.x;
+            window.robotLastPos.z = window._carMesh.position.z;
+        }
     });
 }
 
