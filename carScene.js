@@ -101,6 +101,7 @@ async function createScene(canvas) {
     hemisphericLight.intensity = 0.7;
 
     InitTyreMaterial();
+    setupKeyboardListener();
     const vType = (typeof vehicleType !== 'undefined' && vehicleType) || 'car';
     const vehicle = CreateVehicle(vType);
     camera.lockedTarget = vehicle;
@@ -171,6 +172,47 @@ function CreateRover() {
     physicsBody.setMassProperties({ mass: 600 });
     physicsShape.material = { restitution: 0.1, friction: 50 };
     physicsBody.shape = physicsShape;
+
+    // Contrôle du rover : modifier la vélocité directement
+    scene.onBeforeRenderObservable.add(() => {
+        // Direction avant du rover
+        const forward = merged.forward;
+
+        // Vélocité linéaire : avancer/reculer selon targetSpeed
+        const currentVel = physicsBody.getLinearVelocity();
+        const targetVel = forward.scale(targetSpeed * 0.15);
+        // Mélanger doucement la vélocité actuelle vers la cible
+        const newVel = currentVel.add(targetVel.subtract(currentVel).scale(0.1));
+        physicsBody.setLinearVelocity(newVel);
+
+        // Vélocité angulaire : rotation selon targetSteeringAngle
+        const currentAngVel = physicsBody.getAngularVelocity();
+        const targetAngVel = new BABYLON.Vector3(0, targetSteeringAngle * 0.5, 0);
+        const newAngVel = currentAngVel.add(targetAngVel.subtract(currentAngVel).scale(0.08));
+        physicsBody.setAngularVelocity(newAngVel);
+
+        // Mettre à jour le suivi de distance et d'angle
+        if (window.robotTrackingInitialized) {
+            let currentAngle = 0;
+            if (merged.rotationQuaternion) {
+                const euler = merged.rotationQuaternion.toEulerAngles();
+                currentAngle = euler.y;
+            } else {
+                currentAngle = merged.rotation.y;
+            }
+            let deltaAngle = currentAngle - window.robotLastAngle;
+            while (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
+            while (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+            window.robotAccumulatedAngle += Math.abs(deltaAngle);
+            window.robotLastAngle = currentAngle;
+
+            const dx = merged.position.x - window.robotLastPos.x;
+            const dz = merged.position.z - window.robotLastPos.z;
+            window.robotAccumulatedDistance += Math.sqrt(dx * dx + dz * dz);
+            window.robotLastPos.x = merged.position.x;
+            window.robotLastPos.z = merged.position.z;
+        }
+    });
 
     window._carMesh = merged;
     window.robotResetTracking();
@@ -450,65 +492,49 @@ function AttachSteering(joint) {
     return joint;
 }
 
-function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB) {
-    let forwardPressed = false;
-    let backPressed = false;
-    let leftPressed = false;
-    let rightPressed = false;
+// ── Contrôle clavier global (pour les deux véhicules) ──
+function setupKeyboardListener() {
+    let forwardPressed = false, backPressed = false;
+    let leftPressed = false, rightPressed = false;
     let brakePressed = false;
-
     const maxSpeed = 150;
     const maxSteeringAngle = Math.PI / 6;
 
     scene.onKeyboardObservable.add(e => {
+        const down = e.type == BABYLON.KeyboardEventTypes.KEYDOWN;
         switch (e.event.key) {
-            case "w": case "W": case "ArrowUp": forwardPressed = e.type == BABYLON.KeyboardEventTypes.KEYDOWN ? true : false;
-                break;
-            case "s": case "S": case "ArrowDown": backPressed = e.type == BABYLON.KeyboardEventTypes.KEYDOWN ? true : false;
-                break;
-            case "a": case "A": case "ArrowLeft": leftPressed = e.type == BABYLON.KeyboardEventTypes.KEYDOWN ? true : false;
-                break;
-            case "d": case "D": case "ArrowRight": rightPressed = e.type == BABYLON.KeyboardEventTypes.KEYDOWN ? true : false;
-                break;
-            case " ": brakePressed = e.type == BABYLON.KeyboardEventTypes.KEYDOWN ? true : false;
-                break;
+            case "w": case "W": case "ArrowUp": forwardPressed = down; break;
+            case "s": case "S": case "ArrowDown": backPressed = down; break;
+            case "a": case "A": case "ArrowLeft": leftPressed = down; break;
+            case "d": case "D": case "ArrowRight": rightPressed = down; break;
+            case " ": brakePressed = down; break;
         }
     });
 
+    // Appliquer le clavier aux globaux targetSpeed/targetSteeringAngle
     scene.onBeforeRenderObservable.add(() => {
-        // Si une touche clavier est active, le clavier prend le contrôle
-        if (leftPressed || rightPressed || forwardPressed || backPressed || brakePressed) {
-            if (leftPressed && targetSteeringAngle < maxSteeringAngle) {
-                targetSteeringAngle += 0.01;
-            } else if (rightPressed && targetSteeringAngle > -maxSteeringAngle) {
-                targetSteeringAngle -= 0.01;
-            } else if (!leftPressed && !rightPressed) {
-                targetSteeringAngle *= 0.98;
-            }
+        if (!forwardPressed && !backPressed && !leftPressed && !rightPressed && !brakePressed) return;
+        if (leftPressed && targetSteeringAngle < maxSteeringAngle) targetSteeringAngle += 0.01;
+        else if (rightPressed && targetSteeringAngle > -maxSteeringAngle) targetSteeringAngle -= 0.01;
+        else if (!leftPressed && !rightPressed) targetSteeringAngle *= 0.98;
+        if (brakePressed) targetSpeed = 0;
+        else if (forwardPressed && targetSpeed < maxSpeed) targetSpeed += 8;
+        else if (backPressed && targetSpeed > -maxSpeed * 0.5) targetSpeed -= 8;
+        else if (!forwardPressed && !backPressed) targetSpeed *= 0.99;
+    });
+}
 
-            if (brakePressed) {
-                targetSpeed = 0;
-            } else if (forwardPressed && targetSpeed < maxSpeed) {
-                targetSpeed += 8;
-            } else if (backPressed && targetSpeed > -maxSpeed * 0.5) {
-                targetSpeed -= 8;
-            } else if (!forwardPressed && !backPressed) {
-                targetSpeed *= 0.99;
-            }
-        }
-        // Aucune touche active → les valeurs restent telles quelles
-        // (Blockly ou dernière commande clavier)
-
+function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB) {
+    // Appliquer targetSpeed/targetSteeringAngle aux joints moteurs/direction de la voiture
+    scene.onBeforeRenderObservable.add(() => {
         const [innerAngle, outerAngle] = CalculateWheelAngles(targetSteeringAngle);
-        // Correction de la direction Ackermann : La roue gauche (A) est la roue intérieure quand on tourne à gauche, 
-        // et la roue droite (B) est la roue extérieure. L'ancien code les avait inversées.
         steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, innerAngle);
         steerWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
 
         motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, targetSpeed);
         motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, targetSpeed);
 
-        // Mettre à jour le suivi de distance et d'angle si initialisé
+        // Mettre à jour le suivi de distance et d'angle
         if (window._carMesh && window.robotTrackingInitialized) {
             let currentAngle = 0;
             if (window._carMesh.rotationQuaternion) {
@@ -517,15 +543,12 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
             } else {
                 currentAngle = window._carMesh.rotation.y;
             }
-
-            // Calculer delta angle et l'accumuler
             let deltaAngle = currentAngle - window.robotLastAngle;
             while (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
             while (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
             window.robotAccumulatedAngle += Math.abs(deltaAngle);
             window.robotLastAngle = currentAngle;
 
-            // Calculer delta distance et l'accumuler (distance curviligne le long du trajet)
             const dx = window._carMesh.position.x - window.robotLastPos.x;
             const dz = window._carMesh.position.z - window.robotLastPos.z;
             const deltaDist = Math.sqrt(dx * dx + dz * dz);
