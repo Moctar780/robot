@@ -38,8 +38,10 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android' || '' }}
+
+      - name: Install Android Rust targets
+        if: matrix.target == 'android'
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 
       - name: Install system dependencies (Linux desktop)
         if: matrix.target == 'linux'
@@ -91,6 +93,7 @@ jobs:
         run: npx tauri android init
 
       - name: Build Tauri app (${{ matrix.target }})
+        if: matrix.target != 'android'
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -100,4 +103,10 @@ jobs:
           releaseBody: "Consultez les assets ci-dessous pour télécharger l'application."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.target == 'android' && '--target android' || '' }}
+
+      - name: Build Android APK/AAB
+        if: matrix.target == 'android'
+        run: npx tauri android build --apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
