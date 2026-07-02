@@ -43,7 +43,7 @@ async function createNewScene() {
     }
 
     const canvas = document.getElementById('renderCanvas');
-    const { default: createScene } = await import('./carScene.js');
+    const { createScene } = await import('./core/index.js');
     currentScene = await createScene(canvas);
     currentEngine = currentScene.getEngine();
 
