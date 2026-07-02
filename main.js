@@ -81,7 +81,6 @@ function toggleCamera() {
     }
 }
 
-function 
 function switchVehicle(type) {
     document.querySelectorAll('#vehicleMenu button').forEach(b => b.classList.remove('active'));
     document.querySelector(`#vehicleMenu button[data-vehicle="${type}"]`)?.classList.add('active');
