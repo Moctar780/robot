@@ -70,8 +70,9 @@ export async function startCameraControl() {
             startFallback(video, canvas);
         }
     } catch (err) {
-        console.error('Erreur caméra :', err);
-        stopCameraControl();
+        console.error('📷 Aucune caméra navigateur disponible :', err.message || err);
+        active = false;
+        // Le processus Python tourne toujours — l'utilisateur peut réessayer
     }
 }
 
