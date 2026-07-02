@@ -94,12 +94,17 @@
             background: #2a2a2a;
             border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 10px;
-            padding: 8px;
+            padding: 6px 8px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 0px;
             min-width: 140px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.9);
+            transition: all 0.25s ease;
+        }
+        .menu-group:hover {
+            gap: 4px;
+            padding: 8px;
         }
 
         .menu-group label {
@@ -109,10 +114,17 @@
             letter-spacing: 2px;
             padding: 2px 6px 4px;
             border-bottom: 2px solid rgba(255,255,255,0.3);
-            margin-bottom: 4px;
+            margin-bottom: 0px;
             font-weight: bold;
+            cursor: default;
+            user-select: none;
+            transition: all 0.25s ease;
+        }
+        .menu-group:hover label {
+            margin-bottom: 4px;
         }
 
+        /* Boutons repliés par défaut */
         .menu-group button {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -123,17 +135,40 @@
             font-size: 13px;
             font-weight: 500;
             text-align: left;
-            transition: all 0.15s;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin: 0;
+            border-width: 0;
+            transition: all 0.25s ease;
+            pointer-events: none;
         }
-        .menu-group button:hover {
+
+        /* Déplier au survol du groupe */
+        .menu-group:hover button {
+            max-height: 40px;
+            opacity: 1;
+            padding: 7px 12px;
+            margin: 0;
+            border-width: 1px;
+            pointer-events: auto;
+        }
+        .menu-group:hover button:hover {
             background: rgba(255, 255, 255, 0.2);
             border-color: rgba(255, 255, 255, 0.4);
         }
-        .menu-group button.active {
+        .menu-group:hover button.active {
             background: rgba(76, 175, 80, 0.5);
             border: 2px solid #4caf50;
             color: #fff;
             font-weight: 700;
+        }
+
+        /* Le label séparateur s'estompe quand le groupe est déplié */
+        .menu-group:hover label {
+            border-bottom-color: rgba(255,255,255,0.5);
         }
     </style>
 </head>
