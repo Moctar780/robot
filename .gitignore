@@ -2,3 +2,14 @@ node_modules/
 dist/
 public/blockly/
 __pycache__/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/local.properties
+src-tauri/gen/android/app/keystore.jks
+src-tauri/gen/schemas/
+
+# Scripts
+generate_icons.py

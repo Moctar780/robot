@@ -1,0 +1,19 @@
+[package]
+name = "babylon-node-havok"
+version = "1.0.0"
+description = "Babylon.js Car Simulation avec Havok Physics et Blockly"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "babylon_node_havok_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

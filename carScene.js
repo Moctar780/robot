@@ -11,7 +11,7 @@ let currentEnvIndex = 0;
 // ── API globale pour Blockly ──
 let targetSpeed = 0;
 let targetSteeringAngle = 0;
-let vehicleType = 'car'; // 'car' | 'rover'
+let vehicleType = 'car'; // 'car' uniquement (rover désactivé)
 
 window.getVehicleType = () => vehicleType;
 window.setVehicleType = (t) => { vehicleType = t; };
@@ -117,7 +117,7 @@ async function createScene(canvas) {
 
 // ── Création de véhicule (voiture ou rover) ──
 function CreateVehicle(type) {
-    if (type === 'rover') return CreateRover();
+    // if (type === 'rover') return CreateRover();  // rover désactivé
     return CreateCar();
 }
 

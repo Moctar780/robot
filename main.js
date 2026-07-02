@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import { initBlockly, runBlocklyCode, stopBlocklyCode, resetBlocklyWorkspace } from './blockly_setup.js';
-import { startCameraControl, stopCameraControl, isCameraActive } from './core/camera_control.js';
+// import { startCameraControl, stopCameraControl, isCameraActive } from './core/camera_control.js';  // caméra désactivée
 
 // Rendre BABYLON accessible globalement pour carScene.js qui l'utilise ainsi
 window.BABYLON = BABYLON;
@@ -25,7 +25,8 @@ async function init() {
     // Exposer les fonctions de changement d'environnement/véhicule
     window.switchEnv = switchEnv;
     window.switchVehicle = switchVehicle;
-    window.toggleCamera = toggleCamera;
+    window.toggleCam = toggleCam;
+    // window.toggleCamera = toggleCamera;  // caméra désactivée
 
     // Créer la scène initiale
     await createNewScene();
@@ -68,24 +69,19 @@ function switchEnv(index) {
         window.switchEnvironment(index);
     }
 }
-function toggleCamera() {
-    const btn = document.getElementById('cameraBtn');
-    if (isCameraActive()) {
-        stopCameraControl();
-        btn.classList.remove('active');
-        btn.textContent = '📷 Caméra';
-    } else {
-        startCameraControl();
-        btn.classList.add('active');
-        btn.textContent = '📷 Arrêter';
-    }
-}
-
 function switchVehicle(type) {
     document.querySelectorAll('#vehicleMenu button').forEach(b => b.classList.remove('active'));
     document.querySelector(`#vehicleMenu button[data-vehicle="${type}"]`)?.classList.add('active');
     if (window.setVehicleType) window.setVehicleType(type);
     createNewScene();
+}
+
+function toggleCam() {
+    const btn = document.getElementById('camBtn');
+    import('./core/scene.js').then(m => {
+        const mode = m.toggleCameraMode();
+        btn.textContent = mode === 'follow' ? '🎥 Suivi' : '🎥 Libre';
+    });
 }
 
 init().catch(console.error);

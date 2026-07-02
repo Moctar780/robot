@@ -194,17 +194,14 @@
         <div id="sceneMenu">
             <div class="menu-group" id="envMenu">
                 <label>Environnement</label>
-                <button data-index="0" class="active" onclick="switchEnv(0)">🏞️ Plaine</button>
-                <button data-index="1" onclick="switchEnv(1)">🧊 Glace</button>
-                <button data-index="2" onclick="switchEnv(2)">🌕 Lunaire</button>
-                <button data-index="3" onclick="switchEnv(3)">🧱 Obstacles</button>
-                <button data-index="4" onclick="switchEnv(4)">🕺 Démo</button>
+                <button data-index="0" class="active" onclick="switchEnv(0)">🕺 Démo</button>
+                <button data-index="1" onclick="switchEnv(1)">🌀 Labyrinthe</button>
             </div>
             <div class="menu-group" id="vehicleMenu">
                 <label>Véhicule</label>
                 <button data-vehicle="car" class="active" onclick="switchVehicle('car')">🚗 Voiture</button>
-                <button data-vehicle="rover" onclick="switchVehicle('rover')">🛸 Rover</button>
-                <button id="cameraBtn" onclick="toggleCamera()">📷 Caméra</button>
+                <button id="camBtn" onclick="toggleCam()">🎥 Suivi</button>
+                <!-- Rover et Caméra désactivés -->
             </div>
         </div>
     </div>

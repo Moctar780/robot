@@ -1,14 +1,35 @@
 // ── Création de la scène principale ──
-import { setEngine, setScene, setHavokInstance } from './context.js';
+import { setEngine, setScene, setHavokInstance, scene } from './context.js';
 import { vehicleType } from './globals.js';
 import { setupKeyboardListener } from './controls.js';
 import { InitTyreMaterial } from './materials.js';
 import { applyEnvironment } from './environment.js';
 import { CreateCar } from './car.js';
-import { CreateRover } from './rover.js';
+// import { CreateRover } from './rover.js';  // rover désactivé
+
+let followCamera = null;
+let freeCamera = null;
+let currentCamMode = 'follow';
 
 function CreateVehicle(type) {
-    return type === 'rover' ? CreateRover() : CreateCar();
+    return CreateCar();  // rover désactivé
+}
+
+export function toggleCameraMode() {
+    if (!scene) return;
+    if (currentCamMode === 'follow') {
+        scene.activeCamera = freeCamera;
+        currentCamMode = 'free';
+        return 'free';
+    } else {
+        scene.activeCamera = followCamera;
+        currentCamMode = 'follow';
+        return 'follow';
+    }
+}
+
+export function getCameraMode() {
+    return currentCamMode;
 }
 
 export default async function createScene(canvas) {
@@ -26,12 +47,23 @@ export default async function createScene(canvas) {
 
     applyEnvironment(0);
 
-    const camera = new BABYLON.FollowCamera('FollowCam', new BABYLON.Vector3(0, 10, -10), scene);
-    camera.radius = 50;
-    camera.heightOffset = 20;
-    camera.rotationOffset = 180;
-    camera.cameraAcceleration = 0.035;
-    camera.maxCameraSpeed = 10;
+    // Caméra suivi (FollowCamera)
+    followCamera = new BABYLON.FollowCamera('FollowCam', new BABYLON.Vector3(0, 10, -10), scene);
+    followCamera.radius = 50;
+    followCamera.heightOffset = 20;
+    followCamera.rotationOffset = 180;
+    followCamera.cameraAcceleration = 0.035;
+    followCamera.maxCameraSpeed = 10;
+
+    // Caméra libre (ArcRotateCamera)
+    freeCamera = new BABYLON.ArcRotateCamera('FreeCam', 0, Math.PI / 3, 80, new BABYLON.Vector3(0, 0, 0), scene);
+    freeCamera.lowerRadiusLimit = 10;
+    freeCamera.upperRadiusLimit = 200;
+    freeCamera.panningSensibility = 1;
+    freeCamera.keysUp = [];
+    freeCamera.keysDown = [];
+    freeCamera.keysLeft = [];
+    freeCamera.keysRight = [];
 
     const light = new BABYLON.HemisphericLight('Light', new BABYLON.Vector3(1, 1, 0), scene);
     light.intensity = 0.7;
@@ -41,7 +73,8 @@ export default async function createScene(canvas) {
 
     const vType = (typeof vehicleType !== 'undefined' && vehicleType) || 'car';
     const vehicle = CreateVehicle(vType);
-    camera.lockedTarget = vehicle;
+    followCamera.lockedTarget = vehicle;
+    scene.activeCamera = followCamera;
 
     engine.runRenderLoop(() => {
         if (scene && scene.activeCamera) scene.render();
