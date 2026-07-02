@@ -1,12 +1,16 @@
-// ── Contrôle du robot simulé par caméra (MediaPipe Hands) ──
+// ── Contrôle du robot simulé par caméra (WebSocket Python + MediaPipe) ──
 // Adapté de sparki_djelia/sparki_djelia/camera_control.py
-// Nécessite le script https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js
-// chargé dans index.html via une balise <script>.
+// Deux modes :
+//   1. WebSocket → se connecte au bridge Python (camera_bridge.py)
+//   2. MediaPipe → détection directe dans le navigateur
 
 let active = false;
 let stream = null;
 let animFrameId = null;
 let lastDirection = 'stop';
+let ws = null;
+
+const WS_URL = 'ws://localhost:8765';
 
 const DEAD_ANGLE_DEG = 25;
 const MIN_INDEX_LENGTH = 0.12;
@@ -25,6 +29,19 @@ export async function startCameraControl() {
     if (active) return;
     active = true;
 
+    // 1. Démarrer le processus Python via le serveur local
+    const started = await startPythonProcess();
+
+    // 2. Attendre le WebSocket (avec retry)
+    const wsOk = await waitForWebSocket(15); // 15 tentatives × 500ms = 7.5s max
+    if (wsOk) {
+        console.log('📷 Détection caméra Python active');
+        afficherIndicateurWS(true);
+        return;
+    }
+
+    // 3. Fallback navigateur (si l'utilisateur accorde la permission)
+    console.log('📷 Utilisation du navigateur (fallback)');
     try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.createElement('video');
@@ -33,10 +50,8 @@ export async function startCameraControl() {
         video.playsInline = true;
         video.play();
 
-        // Attendre que la vidéo soit prête
         await new Promise(r => { video.onloadedmetadata = r; });
 
-        // Créer le canvas d'overlay (caméra miroir en bas à droite)
         const canvas = document.createElement('canvas');
         canvas.id = 'cameraOverlay';
         canvas.width = video.videoWidth || 320;
@@ -49,11 +64,9 @@ export async function startCameraControl() {
         `;
         document.body.appendChild(canvas);
 
-        // Initialiser MediaPipe si disponible
         if (typeof Hands !== 'undefined') {
             await startMediaPipe(video, canvas);
         } else {
-            // Fallback : contrôle par clavier depuis la fenêtre caméra
             startFallback(video, canvas);
         }
     } catch (err) {
@@ -64,13 +77,89 @@ export async function startCameraControl() {
 
 export function stopCameraControl() {
     active = false;
+    // Déconnexion WebSocket
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+    // Arrêter le processus Python
+    stopPythonProcess();
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     document.getElementById('cameraOverlay')?.remove();
     document.getElementById('cameraVideo')?.remove();
+    document.getElementById('wsIndicator')?.remove();
     window.setRobotSpeed(0);
     window.setRobotSteering(0);
     lastDirection = 'stop';
+}
+
+// ── Connexion WebSocket au bridge Python ──
+async function tryWebSocket() {
+    return new Promise((resolve) => {
+        try {
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => resolve(true);
+            ws.onerror = () => { ws = null; resolve(false); };
+            ws.onclose = () => { if (active) stopCameraControl(); };
+            ws.onmessage = (event) => {
+                try {
+                    const cmd = JSON.parse(event.data);
+                    if (cmd.direction && cmd.direction !== lastDirection) {
+                        lastDirection = cmd.direction;
+                        const fn = DIR_TO_CMD[cmd.direction] || DIR_TO_CMD.stop;
+                        fn();
+                    }
+                } catch (e) { /* ignorer */ }
+            };
+            setTimeout(() => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    ws?.close(); ws = null; resolve(false);
+                }
+            }, 1500);
+        } catch (e) { resolve(false); }
+    });
+}
+
+async function waitForWebSocket(maxRetries = 15) {
+    for (let i = 0; i < maxRetries; i++) {
+        const ok = await tryWebSocket();
+        if (ok) return true;
+        await new Promise(r => setTimeout(r, 500));
+    }
+    return false;
+}
+
+// ── Démarrer le processus Python via le serveur local ──
+async function startPythonProcess() {
+    try {
+        const r = await fetch('http://localhost:3001/start', { method: 'POST' });
+        const data = await r.json();
+        return data.status === 'started' || data.status === 'already_running';
+    } catch (e) {
+        console.log('⚠️ Serveur caméra (3001) indisponible. Fallback navigateur.');
+        return false;
+    }
+}
+
+async function stopPythonProcess() {
+    try {
+        await fetch('http://localhost:3001/stop', { method: 'POST' });
+    } catch (e) { /* ignorer */ }
+}
+
+function afficherIndicateurWS(ok) {
+    const el = document.createElement('div');
+    el.id = 'wsIndicator';
+    el.textContent = ok ? '🖥️ Bridge Python connecté' : '⚠️ Bridge non connecté';
+    el.style.cssText = `
+        position: fixed; bottom: 12px; left: 12px; z-index: 9999;
+        background: ${ok ? 'rgba(76,175,80,0.9)' : 'rgba(255,152,0,0.9)'};
+        color: #fff; padding: 6px 14px; border-radius: 6px;
+        font-size: 13px; font-weight: bold;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    `;
+    document.body.appendChild(el);
 }
 
 // ── Mode MediaPipe (détection de la main) ──

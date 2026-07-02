@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "dev:full": "node camera-server.js & vite",
+    "dev:camera": "node camera-server.js",
     "build": "vite build",
     "preview": "vite preview"
   },
