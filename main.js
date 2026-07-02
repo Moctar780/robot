@@ -37,6 +37,7 @@ async function init() {
 async function createNewScene() {
     // Nettoyer l'ancienne scène
     if (currentScene) {
+        if (currentEngine) currentEngine.stopRenderLoop();
         currentScene.dispose();
         currentScene = null;
         currentEngine = null;
@@ -51,7 +52,10 @@ async function createNewScene() {
 
     // Lancer la boucle de rendu
     if (currentScene && currentEngine) {
-        currentEngine.runRenderLoop(() => currentScene.render());
+        const scene = currentScene;
+        currentEngine.runRenderLoop(() => {
+            if (scene && scene.activeCamera) scene.render();
+        });
     }
 }
 

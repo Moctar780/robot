@@ -3,6 +3,9 @@ import { scene, pushEnvMesh, pushEnvObstacle, resetEnvMeshes, resetEnvObstacles,
 import { AddStaticPhysics } from './physics.js';
 import { ENVIRONMENTS } from '../environments.js';
 
+let skyboxMesh = null;
+let currentEnvTexture = null;
+
 export function applyEnvironment(index) {
     // Nettoyer l'ancien environnement
     for (const m of [...window.__envMeshes || [], ...window.__envObstacles || []]) {
@@ -18,10 +21,53 @@ export function applyEnvironment(index) {
     const env = ENVIRONMENTS[index];
     setCurrentEnvIndex(index);
 
-    // Fond
+    // ── Skybox ──
+    if (skyboxMesh) { skyboxMesh.dispose(); skyboxMesh = null; }
+    if (env.skyboxTexture) {
+        try {
+            const cubeTex = new BABYLON.CubeTexture(env.skyboxTexture, scene);
+            cubeTex.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            skyboxMesh = BABYLON.MeshBuilder.CreateBox('skyBox', { size: 1000 }, scene);
+            skyboxMesh.sideOrientation = BABYLON.Mesh.BACKSIDE;
+            const mat = new BABYLON.StandardMaterial('skyBoxMat', scene);
+            mat.backFaceCulling = false;
+            mat.reflectionTexture = cubeTex;
+            mat.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            mat.disableLighting = true;
+            skyboxMesh.material = mat;
+            skyboxMesh.isPickable = false;
+            skyboxMesh.infiniteDistance = true;
+        } catch (e) {
+            console.warn('Skybox non chargée :', e.message);
+        }
+    }
+
+    // ── IBL (environmentTexture pour PBR) ──
+    if (currentEnvTexture) { currentEnvTexture.dispose(); currentEnvTexture = null; }
+    if (env.envTexture) {
+        try {
+            currentEnvTexture = new BABYLON.CubeTexture(env.envTexture, scene);
+            scene.environmentTexture = currentEnvTexture;
+        } catch (e) {
+            console.warn('IBL non chargée :', e.message);
+        }
+    } else {
+        scene.environmentTexture = null;
+    }
+
+    // ── Brouillard ──
+    if (env.fog) {
+        scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+        scene.fogColor = new BABYLON.Color3(...env.fogColor);
+        scene.fogDensity = env.fogDensity || 0.005;
+    } else {
+        scene.fogMode = BABYLON.Scene.FOGMODE_NONE;
+    }
+
+    // ── Fond (couleur de secours) ──
     scene.clearColor = new BABYLON.Color3(...env.skyColor);
 
-    // Sol
+    // ── Sol ──
     const groundMat = new BABYLON.StandardMaterial('GroundMat', scene);
     groundMat.diffuseColor = new BABYLON.Color3(...env.groundColor);
     if (env.groundTexture) {
@@ -36,7 +82,7 @@ export function applyEnvironment(index) {
     AddStaticPhysics(ground, env.friction, env.restitution);
     window.__envMeshes.push(ground);
 
-    // Murs
+    // ── Murs ──
     const wallMat = new BABYLON.StandardMaterial('WallMat', scene);
     wallMat.diffuseColor = new BABYLON.Color3(...env.wallColor);
     const defs = [
@@ -53,7 +99,7 @@ export function applyEnvironment(index) {
         window.__envMeshes.push(w);
     }
 
-    // Obstacles
+    // ── Obstacles ──
     for (const obs of env.obstacles) {
         let m;
         if (obs.type === 'bump') {

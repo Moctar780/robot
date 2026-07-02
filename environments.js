@@ -3,6 +3,9 @@
 // ──────────────────────────────────────────────
 // Données pures — pas de dépendance à BABYLON ici.
 
+// Textures HDRI / skybox disponibles sur le CDN Babylon.js
+const CDN = 'https://assets.babylonjs.com';
+
 export const ENVIRONMENTS = [
     {
         name: 'Plaine',
@@ -14,7 +17,11 @@ export const ENVIRONMENTS = [
         restitution: 0,
         wallColor: [0.4, 0.25, 0.1],
         skyColor: [0.6, 0.8, 1.0],
+        skyboxTexture: `${CDN}/core/environments/backgroundSkybox.dds`,
+        envTexture: `${CDN}/core/environments/environmentSpecular.env`,
         fog: false,
+        fogColor: [0.6, 0.8, 1.0],
+        fogDensity: 0.003,
         obstacles: [],
     },
     {
@@ -23,11 +30,15 @@ export const ENVIRONMENTS = [
         groundColor: [0.85, 0.9, 1.0],
         groundTexture: null,
         groundTextureScale: 1,
-        friction: 10,       // très glissant
+        friction: 10,
         restitution: 0.05,
         wallColor: [0.7, 0.8, 0.95],
         skyColor: [0.9, 0.95, 1.0],
+        skyboxTexture: `${CDN}/core/environments/backgroundSkybox.dds`,
+        envTexture: `${CDN}/core/environments/environmentSpecular.env`,
         fog: false,
+        fogColor: [0.9, 0.95, 1.0],
+        fogDensity: 0.002,
         obstacles: [],
     },
     {
@@ -37,10 +48,14 @@ export const ENVIRONMENTS = [
         groundTexture: null,
         groundTextureScale: 1,
         friction: 100,
-        restitution: 0.3,   // rebondit plus
+        restitution: 0.3,
         wallColor: [0.5, 0.48, 0.45],
         skyColor: [0.05, 0.05, 0.1],
+        skyboxTexture: `${CDN}/core/environments/backgroundSkybox.dds`,
+        envTexture: `${CDN}/core/environments/environmentSpecular.env`,
         fog: false,
+        fogColor: [0.05, 0.05, 0.1],
+        fogDensity: 0.008,
         obstacles: [
             { type: 'bump', x: 30, z: 30, size: 4, height: 2 },
             { type: 'bump', x: -25, z: 40, size: 6, height: 3 },
@@ -57,7 +72,11 @@ export const ENVIRONMENTS = [
         restitution: 0,
         wallColor: [0.5, 0.2, 0.1],
         skyColor: [0.5, 0.6, 0.7],
+        skyboxTexture: `${CDN}/core/environments/backgroundSkybox.dds`,
+        envTexture: `${CDN}/core/environments/environmentSpecular.env`,
         fog: false,
+        fogColor: [0.5, 0.6, 0.7],
+        fogDensity: 0.005,
         obstacles: [
             { type: 'ramp', x: 20, z: 20, width: 8, height: 3, depth: 4 },
             { type: 'ramp', x: -20, z: -20, width: 8, height: 3, depth: 4 },
