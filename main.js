@@ -20,7 +20,7 @@ async function init() {
     // Exposer les fonctions de contrôle Blockly globalement
     window.runBlockly = runBlocklyCode;
     window.stopBlockly = stopBlocklyCode;
-    window.resetBlockly = resetBlocklyWorkspace;
+    window.resetBlockly = resetAll;
 
     // Exposer les fonctions de changement d'environnement/véhicule
     window.switchEnv = switchEnv;
@@ -81,6 +81,15 @@ function toggleCam() {
     import('./core/scene.js').then(m => {
         const mode = m.toggleCameraMode();
         btn.textContent = mode === 'follow' ? '🎥 Suivi' : '🎥 Libre';
+    });
+}
+
+function resetAll() {
+    resetBlocklyWorkspace();
+    import('./core/context.js').then(ctx => {
+        if (window.switchEnvironment) {
+            window.switchEnvironment(ctx.currentEnvIndex);
+        }
     });
 }
 
