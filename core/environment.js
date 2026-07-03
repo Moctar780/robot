@@ -258,7 +258,7 @@ window.switchEnvironment = (index) => {
     loadEnvironmentModels(index);
     // Téléporter la voiture au départ du labyrinthe (position de la case verte)
     if (ENVIRONMENTS[index].name === 'Labyrinthe') {
-        setTimeout(() => teleportCar(-90, 90), 100);
+        setTimeout(() => teleportCar(-80, 90), 100);
     } else {
         setTimeout(() => teleportCar(0, 0), 100);
     }
