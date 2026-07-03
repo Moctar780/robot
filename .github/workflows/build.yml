@@ -131,9 +131,6 @@ jobs:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
           CARGO_PROFILE_DEBUG_DEBUG: false
           CARGO_PROFILE_DEBUG_OPT_LEVEL: "z"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Upload Android APK
         if: matrix.target == 'android'
