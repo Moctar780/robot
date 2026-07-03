@@ -8,10 +8,10 @@ export default defineConfig({
     // Code splitting pour réduire la taille des chunks
     rollupOptions: {
       output: {
-        manualChunks: {
-          babylon: ["@babylonjs/core"],
-          havok: ["@babylonjs/havok"],
-          blockly: ["blockly"],
+        manualChunks(id) {
+          if (id.includes('@babylonjs/core')) return 'babylon';
+          if (id.includes('@babylonjs/havok')) return 'havok';
+          if (id.includes('blockly')) return 'blockly';
         },
       },
     },
