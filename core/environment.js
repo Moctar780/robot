@@ -2,6 +2,7 @@
 import { scene, pushEnvMesh, pushEnvObstacle, resetEnvMeshes, resetEnvObstacles, setCurrentEnvIndex } from './context.js';
 import { AddStaticPhysics } from './physics.js';
 import { ENVIRONMENTS } from '../environments.js';
+import { teleportCar } from './car.js';
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/loaders/OBJ';
 
@@ -255,4 +256,10 @@ window.switchEnvironment = (index) => {
     if (!scene || index < 0 || index >= ENVIRONMENTS.length) return;
     applyEnvironment(index);
     loadEnvironmentModels(index);
+    // Téléporter la voiture au départ du labyrinthe (position de la case verte)
+    if (ENVIRONMENTS[index].name === 'Labyrinthe') {
+        setTimeout(() => teleportCar(-90, 90), 100);
+    } else {
+        setTimeout(() => teleportCar(0, 0), 100);
+    }
 };

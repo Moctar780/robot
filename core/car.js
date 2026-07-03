@@ -1,11 +1,12 @@
 // ── Création de la voiture ──
-import { scene } from './context.js';
+import { scene, currentEnvIndex } from './context.js';
 import { debugColours, FILTERS } from './globals.js';
 import { AddDynamicPhysics, AddAxlePhysics, AddWheelPhysics, AddStaticPhysics, FilterMeshCollisions } from './physics.js';
 import { InitKeyboardControls } from './controls.js';
 import { tyreMaterial } from './materials.js';
+import { ENVIRONMENTS } from '../environments.js';
 
-export function CreateCar() {
+export function CreateCar(spawnPos) {
     const frame = BABYLON.MeshBuilder.CreateBox('Frame', { height: 1, width: 12, depth: 24, faceColors: debugColours });
     frame.position = new BABYLON.Vector3(0, 0.3, 0);
     frame.visibility = 0.5;
@@ -115,4 +116,18 @@ function AttachSteering(joint) {
     joint.setAxisMotorMaxForce(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, 30000000);
     joint.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, 0);
     return joint;
+}
+
+/** Déplace la voiture à une position donnée (utilisé par le labyrinthe) */
+export function teleportCar(x, z) {
+    const car = window._carMesh;
+    if (!car) return;
+    // Déplacer le mesh
+    car.position.x = x;
+    car.position.z = z;
+    // Réinitialiser la physique
+    if (car.physicsBody) {
+        car.physicsBody.setLinearVelocity(BABYLON.Vector3.Zero());
+        car.physicsBody.setAngularVelocity(BABYLON.Vector3.Zero());
+    }
 }

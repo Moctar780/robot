@@ -5,6 +5,7 @@ import { setupKeyboardListener } from './controls.js';
 import { InitTyreMaterial } from './materials.js';
 import { applyEnvironment } from './environment.js';
 import { CreateCar } from './car.js';
+import { ENVIRONMENTS } from '../environments.js';
 // import { CreateRover } from './rover.js';  // rover désactivé
 
 let followCamera = null;
