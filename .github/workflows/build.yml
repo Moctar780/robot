@@ -99,14 +99,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Babylon Car Simulator v__VERSION__'
+          releaseName: 'Hakilidia-Blockly v__VERSION__'
           releaseBody: "Consultez les assets ci-dessous pour télécharger l'application."
           releaseDraft: true
           prerelease: false
 
-      - name: Build Android APK/AAB
+      - name: Build Android APK (debug)
         if: matrix.target == 'android'
-        run: npx tauri android build --apk
+        run: npx tauri android build --apk --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}

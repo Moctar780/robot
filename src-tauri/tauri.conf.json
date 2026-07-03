@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicohman/tauri/refs/heads/main/crates/tauri-cli/config.schema.json",
-  "productName": "Babylon Car Simulator",
+  "productName": "Hakilidia-Blockly",
   "version": "1.0.0",
-  "identifier": "com.babylon.car-simulator",
+  "identifier": "com.hakilidia.blockly",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Babylon.js Car Scene - Havok Physics + Blockly",
+        "title": "Hakilidia-Blockly",
         "width": 1400,
         "height": 900,
         "resizable": true,
