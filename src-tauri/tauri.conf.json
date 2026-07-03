@@ -47,5 +47,11 @@
       "wix": null,
       "nsis": null
     }
+  },
+  "android": {
+    "minSdkVersion": 24,
+    "apk": {
+      "compress": true
+    }
   }
 }
