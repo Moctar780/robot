@@ -76,6 +76,15 @@
             flex: 1;
             height: 100%;
             display: block;
+            touch-action: none;
+        }
+
+        /* Responsive : mobile */
+        @media (max-width: 768px) {
+            #blocklyPanel { display: none; }
+            .menu-group { min-width: 100px; }
+            .menu-group button { font-size: 12px; padding: 5px 8px; }
+            #sceneMenu { gap: 5px; top: 8px; right: 8px; }
         }
 
         /* Menu flottant - position fixe par rapport à la fenêtre */
@@ -88,6 +97,8 @@
             gap: 10px;
             align-items: flex-start;
             pointer-events: auto;
+            flex-wrap: wrap;
+            max-width: 90vw;
         }
 
         .menu-group {
