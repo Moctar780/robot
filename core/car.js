@@ -121,12 +121,11 @@ function AttachSteering(joint) {
 export function teleportCar(x, z) {
     const car = window._carMesh;
     if (!car) return;
-    const body = car.physicsBody;
-    if (body) {
+    if (car.physicsBody) {
+        // Havok : désactiver le preStep, déplacer, réactiver
+        const body = car.physicsBody;
         body.disablePreStep = true;
-        car.position.x = x;
-        car.position.z = z;
-        body.syncWithPhysicsEngine();
+        body.transformNode.position.set(x, 0.3, z);
         body.disablePreStep = false;
         body.setLinearVelocity(BABYLON.Vector3.Zero());
         body.setAngularVelocity(BABYLON.Vector3.Zero());
