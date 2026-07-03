@@ -1,12 +1,11 @@
 // ── Création de la voiture ──
-import { scene, currentEnvIndex } from './context.js';
+import { scene } from './context.js';
 import { debugColours, FILTERS } from './globals.js';
 import { AddDynamicPhysics, AddAxlePhysics, AddWheelPhysics, AddStaticPhysics, FilterMeshCollisions } from './physics.js';
 import { InitKeyboardControls } from './controls.js';
 import { tyreMaterial } from './materials.js';
-import { ENVIRONMENTS } from '../environments.js';
 
-export function CreateCar(spawnPos) {
+export function CreateCar() {
     const frame = BABYLON.MeshBuilder.CreateBox('Frame', { height: 1, width: 12, depth: 24, faceColors: debugColours });
     frame.position = new BABYLON.Vector3(0, 0.3, 0);
     frame.visibility = 0.5;
@@ -122,12 +121,18 @@ function AttachSteering(joint) {
 export function teleportCar(x, z) {
     const car = window._carMesh;
     if (!car) return;
-    // Déplacer le mesh
-    car.position.x = x;
-    car.position.z = z;
-    // Réinitialiser la physique
-    if (car.physicsBody) {
-        car.physicsBody.setLinearVelocity(BABYLON.Vector3.Zero());
-        car.physicsBody.setAngularVelocity(BABYLON.Vector3.Zero());
+    const body = car.physicsBody;
+    if (body) {
+        body.disablePreStep = true;
+        car.position.x = x;
+        car.position.z = z;
+        body.syncWithPhysicsEngine();
+        body.disablePreStep = false;
+        body.setLinearVelocity(BABYLON.Vector3.Zero());
+        body.setAngularVelocity(BABYLON.Vector3.Zero());
+    } else {
+        car.position.x = x;
+        car.position.z = z;
     }
+    window.robotResetTracking?.();
 }
